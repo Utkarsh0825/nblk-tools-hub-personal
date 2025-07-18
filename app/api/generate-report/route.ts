@@ -1,99 +1,38 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-function generateStructuredFallback(answers: any[], toolName: string) {
-  const noAnswers = answers.filter((a: any) => a.answer === "No");
-  const yesAnswers = answers.filter((a: any) => a.answer === "Yes");
-
-  const challenges = noAnswers.slice(0, 2).map((a: any, index: number) => {
-    const question = a.question.toLowerCase();
-    let actionStep = "";
-    
-    if (question.includes("centralized") || question.includes("one place")) {
-      actionStep = "Pick one tool (like a spreadsheet or simple app) and start keeping all your info in one place. That is a good start!";
-    } else if (question.includes("communicate") || question.includes("talk")) {
-      actionStep = "Set up a weekly 15-minute meeting to share updates. This will help everyone stay on the same page.";
-    } else if (question.includes("reports") || question.includes("mistakes")) {
-      actionStep = "Start using simple checklists for important tasks. This will help reduce errors and make your work more reliable.";
-    } else if (question.includes("ads") || question.includes("emails")) {
-      actionStep = "Start tracking which marketing efforts bring in the most customers. This will help you spend your money wisely.";
-    } else if (question.includes("target") || question.includes("customers")) {
-      actionStep = "Write down who your best customers are and what they like. This will help you find more customers like them.";
-    } else if (question.includes("feedback") || question.includes("reviews")) {
-      actionStep = "Ask one customer each week for their honest opinion. This will help you improve your business.";
-    } else if (question.includes("forecast") || question.includes("3 months")) {
-      actionStep = "Start tracking your monthly income and expenses. This will help you plan for the future.";
-    } else if (question.includes("overdue") || question.includes("follow up")) {
-      actionStep = "Set up automatic reminders for when customers owe you money. This will help you get paid faster.";
-    } else if (question.includes("buffer") || question.includes("emergencies")) {
-      actionStep = "Start saving a small amount each month for unexpected expenses. Even $50 a month adds up quickly.";
-    } else {
-      actionStep = "Take one small step this week to improve this area. Every improvement counts!";
-    }
-
-    return {
-      type: "Challenge",
-      description: `Your response to "${a.question}" suggests an area that needs improvement. ${actionStep}`,
-    };
-  });
-
-  const strengths = yesAnswers.length > 0
-    ? [{
-        type: "Strength",
-        description: `Your ${toolName} responses show a positive foundation. You have ${yesAnswers.length} areas working well, which is a great start! Keep building on these strengths.`,
-      }]
-    : [];
-
-  return [...strengths, ...challenges];
-}
-
 export async function POST(request: NextRequest) {
   try {
-    const { toolName, score, answers, name } = await request.json();
+    const { toolName, score, answers, name } = await request.json()
 
     if (!process.env.OPENAI_API_KEY) {
-      console.log("OpenAI API key not found - using intelligent fallback");
+      console.log("OpenAI API key not found - using intelligent fallback")
+      const fallbackInsights = generateStructuredFallback(answers, toolName);
+      const fallbackContent = generateIntelligentReport(toolName, score, answers, name);
       return NextResponse.json({
         success: true,
-        insights: generateStructuredFallback(answers, toolName),
+        insights: fallbackInsights,
+        content: fallbackContent,
         source: "intelligent_fallback",
-      });
+      })
     }
 
-    const yesCount = answers.filter((a: any) => a.answer === "Yes").length;
-    const noCount = answers.filter((a: any) => a.answer === "No").length;
+    const prompt = `You are a diagnostic business analyst. Analyze the following YES/NO questions and answers from the user for the ${toolName} tool. Based on these, create 3 sharp insights. Then, write a detailed, professional, 1-page diagnostic report for a small business using data visuals and tables where needed. Focus on clarity and action steps.
 
-    let prompt = `You are a friendly business advisor helping small business owners improve their operations. Use a simple, supportive tone at a 6th-grade reading level.
+Client: ${name}
+Tool: ${toolName}
+Score: ${score}/100
 
-The client just completed a diagnostic tool called: "${toolName}".
-Here are their answers:
+Questions and Answers:
 ${answers.map((a: any, i: number) => `${i + 1}. ${a.question} - ${a.answer}`).join("\n")}
 
-Generate exactly 1 Strength and 2 Challenges. Each insight should:
-- Identify one specific issue in simple, plain English
-- Offer one easy action step
-- Be written at a 6th-grade reading level
-- Keep the tone supportive, not critical (we want users to feel encouraged)
+Create a comprehensive business diagnostic report with:
+1. Executive Summary
+2. Key Insights (exactly 3)
+3. Strategic Recommendations (5-7 actionable items)
+4. Implementation Timeline
+5. Success Metrics
 
-Format your response exactly like this:
-
-1. Strength: [One thing they do well - be specific and encouraging]
-2. Challenge: [Specific issue + one simple action step they can take]
-3. Challenge: [Another specific issue + one simple action step they can take]
-
-Example format:
-1. Strength: Your business has good customer relationships. This is a strong foundation to build on.
-2. Challenge: Your data is stored in lots of different places. Pick one tool (like a spreadsheet or simple app) and start keeping all your info in one place. That is a good start!
-3. Challenge: Your team doesn't talk to each other enough. Set up a weekly 15-minute meeting to share updates. This will help everyone stay on the same page.
-
-Avoid emojis, icons, or vague questions. Use direct, friendly tone.`.trim();
-
-    if (noCount === 0) {
-      prompt += `\n\nSince all answers are 'Yes', praise their strong practices and suggest one common improvement seen in similar businesses.`;
-    } else if (yesCount === 0) {
-      prompt += `\n\nSince all answers are 'No', encourage them positively. Emphasize opportunity for growth and give simple, clear first steps.`;
-    } else if (yesCount >= 8 && noCount <= 2) {
-      prompt += `\n\nSince most answers are 'Yes', praise their overall strength but include 1–2 thoughtful, improvement-oriented suggestions.`;
-    }
+Limit output to 600-800 words for a 1-page equivalent.`
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -106,186 +45,57 @@ Avoid emojis, icons, or vague questions. Use direct, friendly tone.`.trim();
         messages: [
           {
             role: "system",
-            content: "You are a professional business consultant specializing in small business diagnostics and strategic planning.",
+            content:
+              "You are a professional business consultant specializing in small business diagnostics and strategic planning.",
           },
           {
             role: "user",
             content: prompt,
           },
         ],
-        max_tokens: 800,
+        max_tokens: 1500,
         temperature: 0.7,
       }),
-    });
+    })
 
     if (!response.ok) {
-      console.error(`OpenAI API error: ${response.status}`);
+      console.error(`OpenAI API error: ${response.status}`)
+      const fallbackInsights = generateStructuredFallback(answers, toolName);
+      const fallbackContent = generateIntelligentReport(toolName, score, answers, name);
       return NextResponse.json({
         success: true,
-        insights: generateStructuredFallback(answers, toolName),
+        insights: fallbackInsights,
+        content: fallbackContent,
         source: "fallback_after_error",
-      });
+      })
     }
 
-    const data = await response.json();
-    const parsedContent = data.choices[0].message.content
-  ?.split("\n")
-  .filter((line: string) => line.trim() !== "")
-
-  .map((line: string) => {
-    const cleanLine = line.replace(/^\d+\.\s*/, "").trim();
-
-    if (/^strength:/i.test(cleanLine)) {
-      const description = cleanLine.replace(/^strength:\s*/i, "").trim();
-      if (!description.endsWith("?")) {
-        return {
-          type: "Strength",
-          description,
-        };
-      } else {
-        return null;
-      }
-    }
-
-    if (/^challenge:/i.test(cleanLine)) {
-      const description = cleanLine.replace(/^challenge:\s*/i, "").trim();
-      if (!description.endsWith("?")) {
-        return {
-          type: "Challenge",
-          description,
-        };
-      } else {
-        return null;
-      }
-    }
-
-    return null;
-  }
-)
-  .filter(Boolean);
-
-
-
-
-    // Generate the full report content using the insights
-    const fullReportContent = generateFullReportContent(toolName, score, answers, name, parsedContent);
-    
+    const data = await response.json()
     return NextResponse.json({
       success: true,
-      insights: parsedContent,
-      content: fullReportContent,
+      content: data.choices[0].message.content,
       source: "openai",
-    });
+    })
   } catch (error) {
-    console.error("Error generating report:", error);
-    const { toolName, answers, score, name } = await request.json().catch(() => ({
+    console.error("Error generating report:", error)
+    const { toolName, score, answers, name } = await request.json().catch(() => ({
       toolName: "Business Diagnostic",
-      answers: [],
       score: 0,
-      name: "Client"
-    }));
+      answers: [],
+      name: "Valued Client",
+    }))
 
     const fallbackInsights = generateStructuredFallback(answers, toolName);
-    const fallbackContent = generateFullReportContent(toolName, score, answers, name, fallbackInsights);
-
+    const fallbackContent = generateIntelligentReport(toolName, score, answers, name);
     return NextResponse.json({
       success: true,
       insights: fallbackInsights,
       content: fallbackContent,
       source: "error_fallback",
-    });
+    })
   }
 }
 
-function generateFullReportContent(toolName: string, score: number, answers: any[], name: string, insights: any[]) {
-  const currentDate = new Date().toLocaleDateString();
-  const yesCount = answers.filter((a: any) => a.answer === "Yes").length;
-  const noCount = answers.filter((a: any) => a.answer === "No").length;
-
-  // Separate insights by type
-  const strengths = insights.filter((insight: any) => insight.type === "Strength");
-  const challenges = insights.filter((insight: any) => insight.type === "Challenge");
-
-  return `**NBLK BUSINESS DIAGNOSTIC REPORT**
-**Small Business Solutions by NBLK**
-
-**Client:** ${name}
-**Assessment:** ${toolName}
-**Date:** ${currentDate}
-**Score:** ${score}/100
-
----
-
-**EXECUTIVE SUMMARY**
-
-Your ${toolName} diagnostic shows a score of ${score}/100, highlighting substantial opportunities for improvement. While you have ${yesCount} positive elements to build upon, ${noCount} critical areas require immediate attention. This assessment provides a clear roadmap for transforming your business operations.
-
----
-
-**KEY INSIGHTS**
-
-${strengths.length > 0 ? `**1. Strength**
-${strengths[0].description}` : ''}
-
-${challenges.map((challenge: any, index: number) => `**${index + 1 + (strengths.length > 0 ? 1 : 0)}. Challenge**
-${challenge.description}`).join('\n\n')}
-
----
-
-**STRATEGIC RECOMMENDATIONS**
-
-1. Review this report with your leadership team within 48 hours
-2. Prioritize the top 3 recommendations based on impact and resources
-3. Schedule follow-up consultation to discuss implementation strategy
-
----
-
-**IMPLEMENTATION TIMELINE**
-
-**Immediate (0-30 days):**
-• Review diagnostic report with leadership team
-• Prioritize top 3 recommendations by impact and resources
-• Assign team members as owners for each initiative
-
-**Short-term (30-90 days):**
-• Create detailed implementation plans for priority areas
-• Begin implementing quick wins for immediate results
-• Set up weekly progress check-ins
-
-**Long-term (90+ days):**
-• Establish quarterly business diagnostic reviews
-• Scale successful improvements across other business areas
-• Consider engaging professional consultants for complex implementations
-
----
-
-**SUCCESS METRICS**
-
-• Business process efficiency improvement (target: 25% increase)
-• Operational cost reduction
-• Customer satisfaction enhancement
-• Team productivity optimization
-
----
-
-**NEXT STEPS**
-
-1. Review this report with your leadership team within 48 hours
-2. Prioritize the top 3 recommendations based on impact and resources
-3. Schedule follow-up consultation to discuss implementation strategy
-
-**Contact Information:**
-NBLK Consulting
-442 5th Avenue, #2304, New York, NY 10018
-Email: awashington@nblkconsulting.com
-Phone: (212) 598-3030
-
-*Small Business Solutions by NBLK - Empowering Business Clarity Through Data-Driven Insights*`;
-}
-
-
-
-// 🧠 Optional fallback report (used when API fails)
 function generateIntelligentReport(toolName: string, score: number, answers: any[], name: string) {
   const noAnswers = answers?.filter((a) => a.answer === "No") || []
   const yesAnswers = answers?.filter((a) => a.answer === "Yes") || []
@@ -360,9 +170,6 @@ Phone: (212) 598-3030
 *Small Business Solutions by NBLK - Empowering Business Clarity Through Data-Driven Insights*
 `
 }
-
-// ... rest of helper functions remain unchanged
-
 
 function generateExecutiveSummary(toolName: string, score: number, issues: number, strengths: number) {
   const tool = toolName.split(" ")[0]
@@ -526,4 +333,50 @@ function generateMetrics(toolName: string) {
     "Team productivity metrics",
     "Customer satisfaction scores",
   ]
+}
+
+function generateStructuredFallback(answers: any[], toolName: string) {
+  const noAnswers = answers.filter((a: any) => a.answer === "No");
+  const yesAnswers = answers.filter((a: any) => a.answer === "Yes");
+
+  const challenges = noAnswers.slice(0, 2).map((a: any, index: number) => {
+    const question = a.question.toLowerCase();
+    let actionStep = "";
+    
+    if (question.includes("centralized") || question.includes("one place")) {
+      actionStep = "Pick one tool (like a spreadsheet or simple app) and start keeping all your info in one place. That is a good start!";
+    } else if (question.includes("communicate") || question.includes("talk")) {
+      actionStep = "Set up a weekly 15-minute meeting to share updates. This will help everyone stay on the same page.";
+    } else if (question.includes("reports") || question.includes("mistakes")) {
+      actionStep = "Start using simple checklists for important tasks. This will help reduce errors and make your work more reliable.";
+    } else if (question.includes("ads") || question.includes("emails")) {
+      actionStep = "Start tracking which marketing efforts bring in the most customers. This will help you spend your money wisely.";
+    } else if (question.includes("target") || question.includes("customers")) {
+      actionStep = "Write down who your best customers are and what they like. This will help you find more customers like them.";
+    } else if (question.includes("feedback") || question.includes("reviews")) {
+      actionStep = "Ask one customer each week for their honest opinion. This will help you improve your business.";
+    } else if (question.includes("forecast") || question.includes("3 months")) {
+      actionStep = "Start tracking your monthly income and expenses. This will help you plan for the future.";
+    } else if (question.includes("overdue") || question.includes("follow up")) {
+      actionStep = "Set up automatic reminders for when customers owe you money. This will help you get paid faster.";
+    } else if (question.includes("buffer") || question.includes("emergencies")) {
+      actionStep = "Start saving a small amount each month for unexpected expenses. Even $50 a month adds up quickly.";
+    } else {
+      actionStep = "Take one small step this week to improve this area. Every improvement counts!";
+    }
+
+    return {
+      type: "Challenge",
+      description: `Your response to "${a.question}" suggests an area that needs improvement. ${actionStep}`,
+    };
+  });
+
+  const strengths = yesAnswers.length > 0
+    ? [{
+        type: "Strength",
+        description: `Your ${toolName} responses show a positive foundation. You have ${yesAnswers.length} areas working well, which is a great start! Keep building on these strengths.`,
+      }]
+    : [];
+
+  return [...strengths, ...challenges];
 }

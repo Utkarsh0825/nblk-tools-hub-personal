@@ -2,15 +2,11 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { ChevronLeft, ChevronRight, X as CloseIcon, CheckCircle, XCircle, EyeOff, MoreVertical, Mail, Phone, AlertTriangle, TrendingUp, Lock } from "lucide-react"
+import { ChevronLeft, ChevronRight, X as CloseIcon, CheckCircle, XCircle, EyeOff, MoreVertical, Mail, Phone, AlertTriangle, TrendingUp, Lock, Check, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import type { DiagnosticAnswer } from "@/app/page"
 
-interface Insight {
-  description: string;
-  type: 'strength' | 'challenge';
-}
 interface PartialReportProps {
   toolName: string
   score: number
@@ -19,8 +15,6 @@ interface PartialReportProps {
   onRetakeDiagnostic: () => void
   onLogoClick: () => void
   businessName: string // Added prop for business name
-  insights: Insight[];
-
 }
 
 export default function PartialReport({
@@ -31,7 +25,6 @@ export default function PartialReport({
   onRetakeDiagnostic,
   onLogoClick,
   businessName, // Added prop
-  insights,
 }: PartialReportProps) {
   const [dropdownOpen, setDropdownOpen] = useState<number | null>(null)
   const [contactDialogOpen, setContactDialogOpen] = useState(false)
@@ -169,7 +162,7 @@ export default function PartialReport({
     return insights.slice(0, 3)
   }
 
-  const generatedInsights = generateInsights(answers, toolName)
+  const insights = generateInsights(answers, toolName)
 
   // Calculate the average score from the leaderboard
   
@@ -326,6 +319,32 @@ export default function PartialReport({
   else if (score >= 61 && score <= 85) pointerIdx = 2;
   else if (score >= 86) pointerIdx = 3;
 
+  // Milestone step descriptions
+  const milestoneSteps = [
+    {
+      label: 'Take Diagnostic',
+      completed: true,
+      description: 'You completed the module diagnostic to assess your current business status'
+    },
+    {
+      label: 'Free Insights',
+      completed: true,
+      description: 'This is a preview of your results. See where you stand!'
+    },
+    {
+      label: 'Enter Email',
+      completed: false,
+      description: 'Want a detailed breakdown for this module? Enter your email & we’ll send it right over'
+    },
+    {
+      label: 'Sign-up',
+      completed: false,
+      description: 'Sign up to unlock all features: multi-page report, tailored recommendations and staffing match tool'
+    },
+  ];
+
+  const [expandedStep, setExpandedStep] = useState<number | null>(null);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -396,10 +415,15 @@ export default function PartialReport({
             {/* SECOND PROGRESS BAR: Average Only */}
             {/* Lighter color, smaller size, floating badge at average */}
             {(() => {
-              // Lighter color logic
-              let avgBarColor = 'bg-green-100';
-              if (progressBarColor.includes('red')) avgBarColor = 'bg-red-100';
-              else if (progressBarColor.includes('yellow')) avgBarColor = 'bg-yellow-100';
+              // Average bar color logic 
+              let avgBarColor = 'bg-green-500';
+              if (average <= 45) {
+                avgBarColor = 'bg-red-500';
+              } else if (average <= 79) {
+                avgBarColor = 'bg-yellow-400';
+              } else {
+                avgBarColor = 'bg-green-500';
+              }
               // Bar height and badge size
               return (
                 <>
@@ -533,7 +557,7 @@ export default function PartialReport({
                     className={`flex flex-col items-center ${isCurrent ? 'mx-2 z-20' : 'mx-1 opacity-50 scale-95'}`}
                   >
                     <div
-                      className={`flex items-center justify-center rounded-full border border-white/30 shadow-sm ${isCurrent ? 'bg-neutral-900/80 text-white text-base px-8 py-3 font-semibold' : 'bg-gray-800 text-white text-xs px-3 py-1.5 font-normal'} cursor-pointer`}
+                      className={`flex items-center justify-center rounded-full border border-white/30 shadow-sm ${isCurrent ? 'bg-neutral-900/80 text-white text-sm px-10 py-4 font-semibold' : 'bg-gray-800 text-white text-xs px-6 py-2 font-normal'} cursor-pointer`}
                       onClick={() => {
                         setWalkthroughStep(idx);
                         setWalkthroughOpen(true);
@@ -548,9 +572,7 @@ export default function PartialReport({
                         }
                       }}
                     >
-                      {isCurrent
-                        ? level.label
-                        : level.label.replace(/Level \d+: /, '')}
+                      {level.label}
                     </div>
                     {/* Tooltip on hover for current badge remains */}
                     {isCurrent && pointsToNext !== null && nextLevelLabel && (
@@ -614,70 +636,65 @@ export default function PartialReport({
         {/* Key Insights */}
         <div className="space-y-4">
           <h2 className="text-lg pt-4 font-semibold">Initial Insights & Challenges</h2>
-          {insights.length > 0 && (
-            <div className="mt-6 space-y-4">
-              {insights.map((insight: Insight, index: number) => {
-                const { type, description } = insight;
-                return (
-                  <div
-                    key={index}
-                    className="rounded-lg border border-white/10 bg-white/5 p-6 space-y-2"
-                  >
-                    <h4 className={`font-semibold text-base ${type === 'strength' ? 'text-green-400' : 'text-red-400'}`}>
-                      {type === 'strength' ? 'Strength' : 'Challenge'}
-                    </h4>
-                    <p className="text-white/70 text-sm">{description}</p>
-                  </div>
-                );
-              })}
+          
+          {insights.map((insight, index) => (
+            <div key={index} className="rounded-lg border border-white/10 hover:border-white/20 p-6 bg-white/5 flex gap-5 items-start">
+              <insight.icon className="text-white mt-1 shrink-0 stroke-2" />
+              <div className="flex-1">
+                <h4 className="font-semibold text-base mb-1 text-white/90">{insight.title}</h4>
+                <p className="text-white/60 text-sm">{insight.description}</p>
+              </div>
             </div>
-          )}
+          ))}
         </div>
 
         {/* Milestone Tracker Section */}
-        <div className="mt-1">
+        <div className="mt-1 z-0">
           <h2 className="text-lg font-semibold pt-4 mb-4 text-left">Track Milestones</h2>
-          <div className="rounded-lg border border-white/10 p-10 bg-white/5 shadow-lg flex flex-col items-center w-full mx-auto">
-            <div className="relative flex flex-col items-center w-full">
-              {/* Progress Bar Color Horizontal Line */}
-              <div className={`absolute left-0 top-1/2 w-full h-2 z-0 rounded-full ${progressBarColor}`} style={{transform: 'translateY(-50%)'}} />
-              {/* Milestone Points */}
-              <div className="relative w-full flex justify-between items-center z-10 px-2" style={{marginTop: 0}}>
-                {milestoneRecs.map((rec, idx) => {
-                  const isLocked = false;
-                  const isCurrent = pointerIdx === idx;
+          <div className="rounded-lg border border-white/10 p-10 bg-white/5 shadow-lg flex flex-col items-center w-full mx-auto z-0">
+            {/* Only keep the alternative circle step tracker for milestones */}
+            <div className="w-full max-w-3xl mx-auto items-center">
+              <div className="flex items-left w-full">
+                {milestoneSteps.map((step, idx, arr) => {
+                  const isLast = idx === arr.length - 1;
+                  const isExpanded = expandedStep === idx;
                   return (
-                    <div
-                      key={idx}
-                      className="relative flex flex-col items-center"
-                      style={{ width: '25%' }}
-                      onMouseEnter={() => setDropdownOpen(idx)}
-                      onMouseLeave={() => setDropdownOpen(null)}
-                    >
-                      {/* Milestone Dot with number */}
-                      <button
-                        className={`flex items-center justify-center font-bold transition-transform duration-200 focus:outline-none pointer-events-auto
-                          w-10 h-10 text-base border-2 shadow-md hover:scale-110
-                          rounded-full
-                          bg-white border-white text-black`}
-                        tabIndex={0}
-                        onClick={() => setDropdownOpen(dropdownOpen === idx ? null : idx)}
-                        onBlur={() => setDropdownOpen(null)}
-                      >
-                        <span>{idx + 1}</span>
-                      </button>
-                      {/* Milestone Label */}
-                      {/* <span className="mt-2 text-xs text-gray-300 font-medium">Step {idx + 1}</span> */}
-                      {/* Tooltip with arrow */}
-                      <div className={`absolute left-1/2 -translate-x-1/2 w-56 px-4 py-3 rounded-xl bg-white/90 text-sm font-medium text-gray-900 shadow-2xl border border-black-200 z-50 transition-opacity duration-200 ${dropdownOpen === idx ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${(idx === 1 || idx === 3) ? 'mb-3' : 'mt-3'}`}
-                        style={(idx === 1 || idx === 3) ? { bottom: '2.5rem' } : { top: '2.5rem' }}
-                      >
-                        <div className="font-bold text-sm text-gray-700 mb-1">{`Step ${idx + 1}`}</div>
-                        {idx >= 2 ? (
-                          <span className="text-gray-500 flex items-center gap-2"><Lock className="inline w-4 h-4" /> Get detailed report for all actionable insights</span>
-                        ) : (
-                          rec
+                    <div key={step.label} className="flex-1 flex flex-col">
+                      <div className="flex items-center w-full">
+                        {/* Circle */}
+                        <div className={`flex items-center justify-center rounded-full border-2 ${step.completed ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-gray-300 text-gray-400'} w-9 h-9 font-semibold text-base`}>
+                          {step.completed ? <Check className="w-5 h-5" /> : idx + 1}
+                        </div>
+                        {/* Line to next step */}
+                        {!isLast && (
+                          idx === 1 ? (
+                            // Special case: line after step 2 is half green, half gray
+                            <div className="flex-1 flex h-1 min-w-[32px] mx-2 rounded-full overflow-hidden">
+                              <div className="w-1/3 h-full bg-green-500 rounded-l-full" />
+                              <div className="w-2/3 h-full bg-gray-300 rounded-r-full" />
+                            </div>
+                          ) : (
+                            <div className={`flex-1 h-1 mx-2 rounded-full ${step.completed && arr[idx+1].completed ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                          )
                         )}
+                      </div>
+                      {/* Label with dropdown chevron */}
+                      <button
+                        className={`mt-3 text-sm w-max flex items-center gap-2 focus:outline-none ${step.completed ? 'text-white font-semibold' : 'text-gray-400 font-normal'}`}
+                        onClick={() => setExpandedStep(isExpanded ? null : idx)}
+                        aria-expanded={isExpanded}
+                        aria-controls={`milestone-desc-${idx}`}
+                      >
+                        {step.label}
+                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </button>
+                      {/* Description dropdown */}
+                      <div
+                        id={`milestone-desc-${idx}`}
+                        className={`transition-all duration-200 text-sm pr-5 text-gray-300 ${isExpanded ? 'max-h-32 opacity-100 mt-1' : 'max-h-0 opacity-0 overflow-hidden'}`}
+                        style={{ minWidth: '220px' }}
+                      >
+                        {step.description}
                       </div>
                     </div>
                   );
@@ -687,8 +704,6 @@ export default function PartialReport({
           </div>
         </div>
         {/* End Milestone Tracker Section */}
-
-
 
         {/* Partial Results Warning */}
         {/* <div className="flex gap-3 items-start border-l-4 border-yellow-400 rounded-lg p-5 bg-yellow-900/20 text-yellow-100">

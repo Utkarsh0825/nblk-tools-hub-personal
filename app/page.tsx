@@ -67,32 +67,11 @@ export default function NBLKToolsHub() {
     setCurrentView("diagnostic")
   }
 
-  const handleDiagnosticComplete = async (diagnosticAnswers: DiagnosticAnswer[]) => {
+  const handleDiagnosticComplete = (diagnosticAnswers: DiagnosticAnswer[]) => {
     setAnswers(diagnosticAnswers)
     const yesCount = diagnosticAnswers.filter((a) => a.answer === "Yes").length
     setScore(yesCount * 10)
     setCurrentView("analysis")
-
-    // Generate insights during analysis time
-    try {
-      const reportResponse = await fetch("/api/generate-report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          toolName: selectedTool, 
-          score: yesCount * 10, 
-          answers: diagnosticAnswers, 
-          name: userData.name || "Client" 
-        }),
-      })
-
-      const reportData = await reportResponse.json()
-      if (reportData.success) {
-        setGeneratedInsights(reportData.insights || [])
-      }
-    } catch (error) {
-      console.error("Failed to generate insights:", error)
-    }
 
     // Simulate analysis time
     setTimeout(() => {
@@ -145,7 +124,7 @@ export default function NBLKToolsHub() {
             to: email,
             name,
             toolName,
-            reportContent: reportData.content || reportData.insights,
+            reportContent: reportData.content,
             score,
           }),
         })
@@ -196,7 +175,6 @@ export default function NBLKToolsHub() {
             onRetakeDiagnostic={handleRetakeDiagnostic}
             onLogoClick={handleLogoClick}
             businessName={userData.name || "Your Business"}
-            insights={generatedInsights}
           />
         )}
 
