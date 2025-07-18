@@ -91,6 +91,10 @@ export default function NBLKToolsHub() {
 
     try {
       await generateAndSendReport(name, email, selectedTool, answers, score)
+      // Mark milestone step 3 as complete for this session
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('toolsHubMilestoneStep3Complete', 'true');
+      }
       setCurrentView("success")
     } catch (error) {
       console.error("Failed to send report:", error)

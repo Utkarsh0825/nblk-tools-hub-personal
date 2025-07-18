@@ -33,6 +33,7 @@ export default function PartialReport({
   const [walkthroughStep, setWalkthroughStep] = useState(0);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [showResendSuccess, setShowResendSuccess] = useState(false);
+  const [step3Complete, setStep3Complete] = useState(false);
   // Show walkthrough on first visit only
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -53,6 +54,12 @@ export default function PartialReport({
       return () => clearTimeout(timer);
     }
   }, [resendCooldown]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setStep3Complete(sessionStorage.getItem('toolsHubMilestoneStep3Complete') === 'true');
+    }
+  }, []);
 
   const handleResendReport = async () => {
     if (resendCooldown > 0) return;
@@ -475,13 +482,13 @@ export default function PartialReport({
       description: 'You completed the module diagnostic to assess your current business status'
     },
     {
-      label: 'Free Insights',
+      label: 'Free Insight',
       completed: true,
       description: 'This is a preview of your results. See where you stand!'
     },
     {
       label: 'Enter Email',
-      completed: false,
+      completed: step3Complete,
       description: 'Want a detailed breakdown for this module? Enter your email & we’ll send it right over'
     },
     {
@@ -502,7 +509,12 @@ export default function PartialReport({
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header */}
         <header className="sticky top-0 z-50 bg-black px-4 py-4 flex items-center border-b border-white/10">
-          <button onClick={onRetakeDiagnostic} className="p-2">
+          <button onClick={() => {
+            if (typeof window !== 'undefined') {
+              sessionStorage.removeItem('toolsHubMilestoneStep3Complete');
+            }
+            onRetakeDiagnostic();
+          }} className="p-2">
             <ChevronLeft className="h-5 w-5 text-white" />
           </button>
           <h1 className="text-sm font-medium text-center flex-1">
@@ -764,10 +776,11 @@ export default function PartialReport({
                       >
                         <td className="py-2 px-3">{idx + 1}</td>
                         <td className="py-2 px-3 flex items-center gap-2">
-                          {isCurrent && (
+                          {isCurrent ? (
                             <span className={`inline-block text-black text-sm font-semibold rounded px-2 py-0.5 mr-2 ${progressBarColor}`}>You</span>
+                          ) : (
+                            <span className="blur-[2px] select-none">{entry.name}</span>
                           )}
-                          <span className={isCurrent ? '' : 'blur-[2px] select-none'}>{entry.name}</span>
                         </td>
                         <td className="py-2 px-3">{entry.score}</td>
                       </tr>
@@ -783,7 +796,7 @@ export default function PartialReport({
 
         {/* Key Insights */}
         <div className="space-y-4">
-          <h2 className="text-lg pt-4 font-semibold">Initial Insights & Challenges</h2>
+          <h2 className="text-lg pt-4 font-semibold">Initial Insight & Challenges</h2>
           
           {insights.map((insight, index) => (
             <div key={index} className="rounded-lg border border-white/10 hover:border-white/20 p-6 bg-white/5">
@@ -817,11 +830,15 @@ export default function PartialReport({
                         {/* Line to next step */}
                         {!isLast && (
                           idx === 1 ? (
-                            // Special case: line after step 2 is half green, half gray
-                            <div className="flex-1 flex h-1 min-w-[32px] mx-2 rounded-full overflow-hidden">
-                              <div className="w-1/3 h-full bg-green-500 rounded-l-full" />
-                              <div className="w-2/3 h-full bg-gray-300 rounded-r-full" />
-                            </div>
+                            // Special case: line after step 2 is fully green if step3Complete, else half green/half gray
+                            step3Complete ? (
+                              <div className="flex-1 h-1 min-w-[32px] mx-2 rounded-full bg-green-500"></div>
+                            ) : (
+                              <div className="flex-1 flex h-1 min-w-[32px] mx-2 rounded-full overflow-hidden">
+                                <div className="w-1/3 h-full bg-green-500 rounded-l-full" />
+                                <div className="w-2/3 h-full bg-gray-300 rounded-r-full" />
+                              </div>
+                            )
                           ) : (
                             <div className={`flex-1 h-1 mx-2 rounded-full ${step.completed && arr[idx+1].completed ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                           )
@@ -869,7 +886,12 @@ export default function PartialReport({
         <footer className="sticky left-0 right-0 bottom-0 py-2 bg-black backdrop-blur-md border-t border-white/10">
           <div className="max-w-5xl mx-auto px-1 py-5 flex gap-2 items-center justify-between">
             <Button
-              onClick={onRetakeDiagnostic}
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  sessionStorage.removeItem('toolsHubMilestoneStep3Complete');
+                }
+                onRetakeDiagnostic();
+              }}
               className="flex-1 bg-black text-white border border-white hover:bg-black-100 rounded-lg"
             >
               Retake Diagnostic
