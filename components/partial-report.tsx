@@ -880,21 +880,7 @@ export default function PartialReport({
             >
               Get Detailed Report
             </Button>
-            <Button
-              onClick={handleResendReport}
-              disabled={resendCooldown > 0}
-              className="flex-1 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg"
-            >
-              {resendCooldown > 0 ? `Resend (${resendCooldown}s)` : "Resend Report"}
-            </Button>
           </div>
-          
-          {/* Success Message */}
-          {showResendSuccess && (
-            <div className="fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50">
-              Report resent successfully!
-            </div>
-          )}
         </footer>
       </div>
     </motion.div>

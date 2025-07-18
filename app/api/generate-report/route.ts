@@ -40,6 +40,13 @@ Generate exactly 1 Insight and 2 Challenges based on their actual answers:
 - If mostly "Yes" (7+ yes): Focus on the few "No" answers and expand them into 2 challenges
 - If mostly "No" (7+ no): Summarize the few "Yes" answers as insight, focus on key "No" areas
 
+**IMPORTANT:**
+- Make each insight and challenge unique based on the specific questions they answered
+- Use statements only, no question marks at the end
+- Base insights on their actual "Yes" answers
+- Base challenges on their actual "No" answers
+- Make them specific to the questions they answered
+
 Format your response exactly like this:
 1. Insight: [Positive summary of their good practices - 1-2 lines max]
 2. Challenge: [Specific area for improvement with simple action step]
@@ -50,7 +57,7 @@ Example format:
 2. Challenge: Your marketing attribution needs work. Start tracking which ads bring in customers to spend your money wisely.
 3. Challenge: Your team communication could improve. Set up weekly 15-minute meetings to keep everyone aligned.
 
-Avoid emojis, icons, or vague questions. Use direct, friendly tone.`.trim();
+Avoid emojis, icons, or question marks. Use direct, friendly tone.`.trim();
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -444,7 +451,7 @@ function generateDynamicInsights(answers: any[], toolName: string, score: number
       let actionStep = "";
       
       if (question.includes("centralized") || question.includes("one place")) {
-        actionStep = "Pick one tool (like a spreadsheet or simple app) and start keeping all your info in one place. That is a good start!";
+        actionStep = "Pick one tool (like a spreadsheet or simple app) and start keeping all your info in one place. That is a good start.";
       } else if (question.includes("communicate") || question.includes("talk")) {
         actionStep = "Set up a weekly 15-minute meeting to share updates. This will help everyone stay on the same page.";
       } else if (question.includes("reports") || question.includes("mistakes")) {
@@ -464,12 +471,12 @@ function generateDynamicInsights(answers: any[], toolName: string, score: number
       } else if (question.includes("goals") || question.includes("sales")) {
         actionStep = "Set clear monthly goals for your business. This will help you stay focused and measure progress.";
       } else {
-        actionStep = "Take one small step this week to improve this area. Every improvement counts!";
+        actionStep = "Take one small step this week to improve this area. Every improvement counts.";
       }
 
       return {
         type: "Challenge",
-        description: `Your response to "${a.question}" suggests an area that needs improvement. ${actionStep}`,
+        description: `${actionStep}`,
       };
     });
 
@@ -490,7 +497,7 @@ function generateDynamicInsights(answers: any[], toolName: string, score: number
       let actionStep = "";
       
       if (question.includes("centralized") || question.includes("one place")) {
-        actionStep = "Pick one tool (like a spreadsheet or simple app) and start keeping all your info in one place. That is a good start!";
+        actionStep = "Pick one tool (like a spreadsheet or simple app) and start keeping all your info in one place. That is a good start.";
       } else if (question.includes("communicate") || question.includes("talk")) {
         actionStep = "Set up a weekly 15-minute meeting to share updates. This will help everyone stay on the same page.";
       } else if (question.includes("reports") || question.includes("mistakes")) {
@@ -510,12 +517,12 @@ function generateDynamicInsights(answers: any[], toolName: string, score: number
       } else if (question.includes("goals") || question.includes("sales")) {
         actionStep = "Set clear monthly goals for your business. This will help you stay focused and measure progress.";
       } else {
-        actionStep = "Take one small step this week to improve this area. Every improvement counts!";
+        actionStep = "Take one small step this week to improve this area. Every improvement counts.";
       }
 
       return {
         type: "Challenge",
-        description: `Your response to "${a.question}" suggests an area that needs improvement. ${actionStep}`,
+        description: `${actionStep}`,
       };
     });
 
@@ -533,7 +540,7 @@ function generateDynamicInsights(answers: any[], toolName: string, score: number
     let actionStep = "";
     
     if (question.includes("centralized") || question.includes("one place")) {
-      actionStep = "Pick one tool (like a spreadsheet or simple app) and start keeping all your info in one place. That is a good start!";
+      actionStep = "Pick one tool (like a spreadsheet or simple app) and start keeping all your info in one place. That is a good start.";
     } else if (question.includes("communicate") || question.includes("talk")) {
       actionStep = "Set up a weekly 15-minute meeting to share updates. This will help everyone stay on the same page.";
     } else if (question.includes("reports") || question.includes("mistakes")) {
@@ -553,12 +560,12 @@ function generateDynamicInsights(answers: any[], toolName: string, score: number
     } else if (question.includes("goals") || question.includes("sales")) {
       actionStep = "Set clear monthly goals for your business. This will help you stay focused and measure progress.";
     } else {
-      actionStep = "Take one small step this week to improve this area. Every improvement counts!";
+      actionStep = "Take one small step this week to improve this area. Every improvement counts.";
     }
 
     return {
       type: "Challenge",
-      description: `Your response to "${a.question}" suggests an area that needs improvement. ${actionStep}`,
+      description: `${actionStep}`,
     };
   });
 
@@ -577,7 +584,7 @@ function generateStructuredFallback(answers: any[], toolName: string) {
     let actionStep = "";
     
     if (question.includes("centralized") || question.includes("one place")) {
-      actionStep = "Pick one tool (like a spreadsheet or simple app) and start keeping all your info in one place. That is a good start!";
+      actionStep = "Pick one tool (like a spreadsheet or simple app) and start keeping all your info in one place. That is a good start.";
     } else if (question.includes("communicate") || question.includes("talk")) {
       actionStep = "Set up a weekly 15-minute meeting to share updates. This will help everyone stay on the same page.";
     } else if (question.includes("reports") || question.includes("mistakes")) {
@@ -595,12 +602,12 @@ function generateStructuredFallback(answers: any[], toolName: string) {
     } else if (question.includes("buffer") || question.includes("emergencies")) {
       actionStep = "Start saving a small amount each month for unexpected expenses. Even $50 a month adds up quickly.";
     } else {
-      actionStep = "Take one small step this week to improve this area. Every improvement counts!";
+      actionStep = "Take one small step this week to improve this area. Every improvement counts.";
     }
 
     return {
       type: "Challenge",
-      description: `Your response to "${a.question}" suggests an area that needs improvement. ${actionStep}`,
+      description: `${actionStep}`,
     };
   });
 

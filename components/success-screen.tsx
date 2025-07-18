@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
 import { Star } from "lucide-react"
 import { CheckCircle } from "lucide-react"
@@ -13,6 +13,7 @@ interface SuccessScreenProps {
   onRetakeDiagnostic: () => void
   onViewPreviousResult: () => void
   onLogoClick: () => void
+  onResendReport?: () => void
 }
 
 export default function SuccessScreen({
@@ -20,9 +21,36 @@ export default function SuccessScreen({
   onRetakeDiagnostic,
   onViewPreviousResult,
   onLogoClick,
+  onResendReport,
 }: SuccessScreenProps) {
   const [rating, setRating] = useState(0)
   const [hoveredRating, setHoveredRating] = useState(0)
+  const [resendCooldown, setResendCooldown] = useState(0)
+  const [showResendSuccess, setShowResendSuccess] = useState(false)
+  const cooldownRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      cooldownRef.current = setTimeout(() => {
+        setResendCooldown((prev) => prev - 1)
+      }, 1000)
+    } else if (cooldownRef.current) {
+      clearTimeout(cooldownRef.current)
+    }
+    return () => {
+      if (cooldownRef.current) clearTimeout(cooldownRef.current)
+    }
+  }, [resendCooldown])
+
+  const handleResend = async () => {
+    if (resendCooldown > 0) return
+    if (onResendReport) {
+      await onResendReport()
+      setShowResendSuccess(true)
+      setResendCooldown(60)
+      setTimeout(() => setShowResendSuccess(false), 2500)
+    }
+  }
 
   return (
     <motion.div
@@ -112,10 +140,22 @@ export default function SuccessScreen({
           className="text-center mt-20"
         >
           <p className="text-sm text-gray-400 mb-1">Didn't receive the email?</p>
-          <button className="text-white underline text-sm hover:no-underline hover:text-gray-300 transition-colors duration-300">
-            Resend Report
-          </button>
+          <span
+            onClick={resendCooldown === 0 ? handleResend : undefined}
+            className={`text-white underline text-sm cursor-pointer hover:no-underline hover:text-gray-300 transition-colors duration-300 ${resendCooldown > 0 ? 'opacity-50 pointer-events-none cursor-not-allowed' : ''}`}
+            role="button"
+            tabIndex={0}
+            aria-disabled={resendCooldown > 0}
+          >
+            {resendCooldown > 0 ? `Resend Report (${resendCooldown}s)` : "Resend Report"}
+          </span>
         </motion.div>
+        {/* Success Popup */}
+        {showResendSuccess && (
+          <div className="fixed top-6 right-6 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50">
+            Report resent successfully!
+          </div>
+        )}
       </div>
     </motion.div>
   )

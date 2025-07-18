@@ -140,6 +140,14 @@ export default function NBLKToolsHub() {
     setCurrentView("tools")
   }
 
+  const handleResendReport = async () => {
+    try {
+      await generateAndSendReport(userData.name, userData.email, selectedTool, answers, score)
+    } catch (error) {
+      console.error("Failed to resend report:", error)
+    }
+  }
+
   if (!mounted) {
     return null
   }
@@ -194,6 +202,7 @@ export default function NBLKToolsHub() {
             onRetakeDiagnostic={handleRetakeDiagnostic}
             onViewPreviousResult={() => setCurrentView("partial-report")}
             onLogoClick={handleLogoClick}
+            onResendReport={handleResendReport}
           />
         )}
 
