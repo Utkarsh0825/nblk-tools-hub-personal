@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { ChevronLeft, ChevronRight, X as CloseIcon, CheckCircle, EyeOff, AlertTriangle, TrendingUp, Check, ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronLeft, ChevronRight, X as CloseIcon, CheckCircle, XCircle, EyeOff, MoreVertical, Mail, Phone, AlertTriangle, TrendingUp, Lock, Check, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import type { DiagnosticAnswer } from "@/app/page"
@@ -54,57 +54,16 @@ export default function PartialReport({
     }
   }, [resendCooldown]);
 
-  // Handle resend success message
-  useEffect(() => {
-    if (showResendSuccess) {
-      const timer = setTimeout(() => {
-        setShowResendSuccess(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [showResendSuccess]);
-
   const handleResendReport = async () => {
     if (resendCooldown > 0) return;
     
-    try {
-      // Get user data from localStorage or sessionStorage
-      const userData = localStorage.getItem('userData') || sessionStorage.getItem('userData');
-      if (!userData) {
-        console.error('No user data found for resend');
-        return;
-      }
-      
-      const { name, email } = JSON.parse(userData);
-      
-      // Generate and send report
-      const reportResponse = await fetch("/api/generate-report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ toolName, score, answers, name }),
-      });
-
-      const reportData = await reportResponse.json();
-
-      if (reportData.success) {
-        await fetch("/api/send-report", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: email,
-            name,
-            toolName,
-            reportContent: reportData.content || reportData.insights,
-            score,
-          }),
-        });
-        
-        setShowResendSuccess(true);
-        setResendCooldown(60); // 1 minute cooldown
-      }
-    } catch (error) {
-      console.error("Failed to resend report:", error);
-    }
+    setResendCooldown(60); // 60 seconds cooldown
+    setShowResendSuccess(true);
+    
+    // Hide success message after 3 seconds
+    setTimeout(() => {
+      setShowResendSuccess(false);
+    }, 3000);
   };
   const levels = [
     {
@@ -140,153 +99,215 @@ export default function PartialReport({
     const noCount = noAnswers.length
     const insights = []
 
-    // All YES answers - create FOMO
+    // Case 1: All Yes answers
     if (yesCount === 10) {
       insights.push(
         {
           type: "Insight",
           title: "Excellent Foundation",
-          description: "Your business shows excellent practices across all areas. You have a strong foundation that many businesses strive for.",
+          description: "Your business shows strong practices across all areas. You have a solid foundation for growth and scaling.",
         },
         {
           type: "Challenge",
-          title: "Growth Opportunity",
-          description: "Even with your strong performance, there's always room to grow. Get your detailed report to discover advanced strategies that could take your business to the next level.",
+          title: "Advanced Optimization",
+          description: "Consider getting a detailed analysis to identify advanced optimization opportunities that could take your business to the next level.",
         },
         {
           type: "Challenge",
-          title: "Scale Your Success",
-          description: "Consider how you can scale your current success. The detailed report will show you exactly where to focus for maximum impact.",
+          title: "Professional Consulting",
+          description: "Explore professional consulting to discover hidden growth opportunities and advanced strategies for your business.",
         }
       )
-      return insights
     }
-
-    // All NO answers - motivate without showing good parts
-    if (noCount === 10) {
+    // Case 2: All No answers
+    else if (noCount === 10) {
       insights.push(
         {
           type: "Insight",
-          title: "First Step Taken",
-          description: "Taking this diagnostic is your first step toward business success. You're ready to build a stronger foundation.",
+          title: "First Step Success",
+          description: "Taking this diagnostic is your first step toward business success. Every great business started exactly where you are now.",
         },
         {
           type: "Challenge",
-          title: "Systematic Approach Needed",
-          description: "Your business needs a systematic approach to operations. Start with one area and build from there.",
+          title: "Start Small",
+          description: "Start with one simple improvement this week. Pick the easiest area and take one small action to begin building your business foundation.",
         },
         {
           type: "Challenge",
-          title: "Get Detailed Guidance",
-          description: "Get your detailed report to see exactly which steps to take first. Every successful business started exactly where you are now.",
+          title: "Get Detailed Report",
+          description: "Get your detailed personalized report to see exactly which steps will have the biggest impact on your business growth.",
         }
       )
-      return insights
     }
-
-    // Generate insight from YES answers
-    let insightTitle = ""
-    let insightDescription = ""
-    
-    if (yesCount > 0) {
-      const areas = yesAnswers.map(a => a.question.toLowerCase())
+    // Case 3: Mostly Yes (7+ yes)
+    else if (yesCount >= 7) {
+      insights.push({
+        type: "Insight",
+        title: "Strong Foundation",
+        description: `Your business has strong practices in ${yesCount} key areas. This solid foundation gives you a great advantage for growth and improvement.`,
+      })
       
-      if (toolName.includes("Data Hygiene")) {
-        if (areas.some(q => q.includes("customer") || q.includes("info"))) {
-          insightTitle = "Good Data Management"
-          insightDescription = "You have good systems for managing customer information and business data."
-        } else if (areas.some(q => q.includes("track") || q.includes("system"))) {
-          insightTitle = "Organized Systems"
-          insightDescription = "Your business has organized tracking systems in place."
-        } else {
-          insightTitle = "Solid Foundation"
-          insightDescription = "You have some good data management practices that you can build upon."
+      // Add challenges based on no answers
+      noAnswers.slice(0, 2).forEach((answer, index) => {
+        const question = answer.question.toLowerCase()
+        let title = "Business Process Gap"
+        let description = "Additional improvement opportunity identified."
+        
+        if (question.includes("centralized") || question.includes("one place")) {
+          title = "Data Organization"
+          description = "Pick one tool (like a spreadsheet or simple app) and start keeping all your info in one place. That is a good start!"
+        } else if (question.includes("communicate") || question.includes("talk")) {
+          title = "Team Communication"
+          description = "Set up a weekly 15-minute meeting to share updates. This will help everyone stay on the same page."
+        } else if (question.includes("reports") || question.includes("mistakes")) {
+          title = "Data Quality"
+          description = "Start using simple checklists for important tasks. This will help reduce errors and make your work more reliable."
+        } else if (question.includes("ads") || question.includes("emails")) {
+          title = "Marketing Attribution"
+          description = "Start tracking which marketing efforts bring in the most customers. This will help you spend your money wisely."
+        } else if (question.includes("target") || question.includes("customers")) {
+          title = "Customer Targeting"
+          description = "Write down who your best customers are and what they like. This will help you find more customers like them."
+        } else if (question.includes("feedback") || question.includes("reviews")) {
+          title = "Customer Feedback"
+          description = "Ask one customer each week for their honest opinion. This will help you improve your business."
+        } else if (question.includes("profit") || question.includes("money")) {
+          title = "Profit Tracking"
+          description = "Start tracking your monthly income and expenses. This will help you understand your profit margins better."
+        } else if (question.includes("track") || question.includes("system")) {
+          title = "System Tracking"
+          description = "Set up a simple system to track your key business metrics. This will help you make better decisions."
+        } else if (question.includes("prices") || question.includes("costs")) {
+          title = "Pricing Strategy"
+          description = "Review your pricing strategy and costs. Understanding your numbers will help you price for profit."
+        } else if (question.includes("goals") || question.includes("sales")) {
+          title = "Sales Goals"
+          description = "Set clear monthly goals for your business. This will help you stay focused and measure progress."
         }
-      } else if (toolName.includes("Marketing")) {
-        if (areas.some(q => q.includes("customer") || q.includes("feedback"))) {
-          insightTitle = "Customer Understanding"
-          insightDescription = "You understand your customers and gather feedback effectively."
-        } else if (areas.some(q => q.includes("ads") || q.includes("marketing"))) {
-          insightTitle = "Good Marketing Practices"
-          insightDescription = "You have good marketing practices and customer engagement strategies."
-        } else {
-          insightTitle = "Effective Approaches"
-          insightDescription = "You have some effective marketing approaches that are working well."
-        }
-      } else if (toolName.includes("Cash Flow")) {
-        if (areas.some(q => q.includes("profit") || q.includes("money"))) {
-          insightTitle = "Financial Understanding"
-          insightDescription = "You have a good understanding of your business finances and profitability."
-        } else if (areas.some(q => q.includes("track") || q.includes("system"))) {
-          insightTitle = "Financial Systems"
-          insightDescription = "You have systems in place to track your business finances."
-        } else {
-          insightTitle = "Solid Financial Foundation"
-          insightDescription = "You have some good financial practices that provide a solid foundation."
-        }
-      } else {
-        insightTitle = "Good Performance"
-        insightDescription = "You have several areas where your business is performing well."
-      }
-    } else {
-      insightTitle = "Ready to Improve"
-      insightDescription = "You're taking the right first step by assessing your business needs."
+        
+        insights.push({
+          type: "Challenge",
+          title,
+          description,
+        })
+      })
     }
-
-    insights.push({
-      type: "Insight",
-      title: insightTitle,
-      description: insightDescription,
-    })
-
-    // Generate challenges from NO answers
-    const challenges = []
-    for (let i = 0; i < Math.min(2, noAnswers.length); i++) {
-      const answer = noAnswers[i]
-      const question = answer.question.toLowerCase()
-      let actionStep = ""
-      let challengeTitle = ""
-      
-      if (question.includes("centralized") || question.includes("one place")) {
-        challengeTitle = "Data Organization"
-        actionStep = "Pick one tool and start keeping all your info in one place."
-      } else if (question.includes("communicate") || question.includes("talk")) {
-        challengeTitle = "Team Communication"
-        actionStep = "Set up regular team meetings to share updates."
-      } else if (question.includes("reports") || question.includes("mistakes")) {
-        challengeTitle = "Process Quality"
-        actionStep = "Start using simple checklists for important tasks."
-      } else if (question.includes("ads") || question.includes("emails")) {
-        challengeTitle = "Marketing Tracking"
-        actionStep = "Start tracking which marketing efforts bring in customers."
-      } else if (question.includes("target") || question.includes("customers")) {
-        challengeTitle = "Customer Targeting"
-        actionStep = "Write down who your best customers are and what they like."
-      } else if (question.includes("feedback") || question.includes("reviews")) {
-        challengeTitle = "Customer Feedback"
-        actionStep = "Ask customers for their honest opinion regularly."
-      } else if (question.includes("profit") || question.includes("money")) {
-        challengeTitle = "Financial Tracking"
-        actionStep = "Start tracking your income and expenses more closely."
-      } else if (question.includes("cost") || question.includes("expense")) {
-        challengeTitle = "Cost Management"
-        actionStep = "Calculate your costs and set clear pricing."
-      } else if (question.includes("goal") || question.includes("sales")) {
-        challengeTitle = "Goal Setting"
-        actionStep = "Set clear monthly goals for your business."
+    // Case 4: Mostly No (7+ no)
+    else if (noCount >= 7) {
+      if (yesAnswers.length > 0) {
+        insights.push({
+          type: "Insight",
+          title: "Building on Strengths",
+          description: `You have ${yesAnswers.length} area${yesAnswers.length > 1 ? 's' : ''} working well. Build on these strengths while improving other areas.`,
+        })
       } else {
-        challengeTitle = "Process Improvement"
-        actionStep = "Take one small step this week to improve this area."
+        insights.push({
+          type: "Insight",
+          title: "First Step Success",
+          description: "You're taking the right first step by completing this diagnostic. Every improvement will make a big difference.",
+        })
       }
       
-      challenges.push({
-        type: "Challenge",
-        title: challengeTitle,
-        description: `${answer.question.replace("Do you", "You need to").replace("Have you", "You need to").replace("Is it", "You need to").replace("Are your", "You need to").replace("Can you", "You need to")} ${actionStep}`,
+      // Add challenges based on no answers
+      noAnswers.slice(0, 2).forEach((answer, index) => {
+        const question = answer.question.toLowerCase()
+        let title = "Business Process Gap"
+        let description = "Additional improvement opportunity identified."
+        
+        if (question.includes("centralized") || question.includes("one place")) {
+          title = "Data Organization"
+          description = "Pick one tool (like a spreadsheet or simple app) and start keeping all your info in one place. That is a good start!"
+        } else if (question.includes("communicate") || question.includes("talk")) {
+          title = "Team Communication"
+          description = "Set up a weekly 15-minute meeting to share updates. This will help everyone stay on the same page."
+        } else if (question.includes("reports") || question.includes("mistakes")) {
+          title = "Data Quality"
+          description = "Start using simple checklists for important tasks. This will help reduce errors and make your work more reliable."
+        } else if (question.includes("ads") || question.includes("emails")) {
+          title = "Marketing Attribution"
+          description = "Start tracking which marketing efforts bring in the most customers. This will help you spend your money wisely."
+        } else if (question.includes("target") || question.includes("customers")) {
+          title = "Customer Targeting"
+          description = "Write down who your best customers are and what they like. This will help you find more customers like them."
+        } else if (question.includes("feedback") || question.includes("reviews")) {
+          title = "Customer Feedback"
+          description = "Ask one customer each week for their honest opinion. This will help you improve your business."
+        } else if (question.includes("profit") || question.includes("money")) {
+          title = "Profit Tracking"
+          description = "Start tracking your monthly income and expenses. This will help you understand your profit margins better."
+        } else if (question.includes("track") || question.includes("system")) {
+          title = "System Tracking"
+          description = "Set up a simple system to track your key business metrics. This will help you make better decisions."
+        } else if (question.includes("prices") || question.includes("costs")) {
+          title = "Pricing Strategy"
+          description = "Review your pricing strategy and costs. Understanding your numbers will help you price for profit."
+        } else if (question.includes("goals") || question.includes("sales")) {
+          title = "Sales Goals"
+          description = "Set clear monthly goals for your business. This will help you stay focused and measure progress."
+        }
+        
+        insights.push({
+          type: "Challenge",
+          title,
+          description,
+        })
+      })
+    }
+    // Case 5: Mixed answers (4-6 yes, 4-6 no)
+    else {
+      insights.push({
+        type: "Insight",
+        title: "Balanced Foundation",
+        description: `You have ${yesCount} strong areas and ${noCount} opportunities for improvement. This balanced foundation gives you clear direction for growth.`,
+      })
+      
+      // Add challenges based on no answers
+      noAnswers.slice(0, 2).forEach((answer, index) => {
+        const question = answer.question.toLowerCase()
+        let title = "Business Process Gap"
+        let description = "Additional improvement opportunity identified."
+        
+        if (question.includes("centralized") || question.includes("one place")) {
+          title = "Data Organization"
+          description = "Pick one tool (like a spreadsheet or simple app) and start keeping all your info in one place. That is a good start!"
+        } else if (question.includes("communicate") || question.includes("talk")) {
+          title = "Team Communication"
+          description = "Set up a weekly 15-minute meeting to share updates. This will help everyone stay on the same page."
+        } else if (question.includes("reports") || question.includes("mistakes")) {
+          title = "Data Quality"
+          description = "Start using simple checklists for important tasks. This will help reduce errors and make your work more reliable."
+        } else if (question.includes("ads") || question.includes("emails")) {
+          title = "Marketing Attribution"
+          description = "Start tracking which marketing efforts bring in the most customers. This will help you spend your money wisely."
+        } else if (question.includes("target") || question.includes("customers")) {
+          title = "Customer Targeting"
+          description = "Write down who your best customers are and what they like. This will help you find more customers like them."
+        } else if (question.includes("feedback") || question.includes("reviews")) {
+          title = "Customer Feedback"
+          description = "Ask one customer each week for their honest opinion. This will help you improve your business."
+        } else if (question.includes("profit") || question.includes("money")) {
+          title = "Profit Tracking"
+          description = "Start tracking your monthly income and expenses. This will help you understand your profit margins better."
+        } else if (question.includes("track") || question.includes("system")) {
+          title = "System Tracking"
+          description = "Set up a simple system to track your key business metrics. This will help you make better decisions."
+        } else if (question.includes("prices") || question.includes("costs")) {
+          title = "Pricing Strategy"
+          description = "Review your pricing strategy and costs. Understanding your numbers will help you price for profit."
+        } else if (question.includes("goals") || question.includes("sales")) {
+          title = "Sales Goals"
+          description = "Set clear monthly goals for your business. This will help you stay focused and measure progress."
+        }
+        
+        insights.push({
+          type: "Challenge",
+          title,
+          description,
+        })
       })
     }
 
-    return [...insights, ...challenges]
+    return insights.slice(0, 3)
   }
 
   const insights = generateInsights(answers, toolName)
@@ -867,17 +888,14 @@ export default function PartialReport({
               {resendCooldown > 0 ? `Resend (${resendCooldown}s)` : "Resend Report"}
             </Button>
           </div>
-        </footer>
-
-        {/* Resend Success Toast */}
-        {showResendSuccess && (
-          <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5" />
-              <span>Report resent successfully!</span>
+          
+          {/* Success Message */}
+          {showResendSuccess && (
+            <div className="fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50">
+              Report resent successfully!
             </div>
-          </div>
-        )}
+          )}
+        </footer>
       </div>
     </motion.div>
   )
