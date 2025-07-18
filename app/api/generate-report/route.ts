@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
 
     if (!process.env.OPENAI_API_KEY) {
       console.log("OpenAI API key not found - using intelligent fallback")
-      const fallbackInsights = generateStructuredFallback(answers, toolName);
+      const fallbackInsights = generateDynamicInsights(answers, toolName, score);
       const fallbackContent = generateIntelligentReport(toolName, score, answers, name);
       return NextResponse.json({
         success: true,
@@ -16,23 +16,41 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const prompt = `You are a diagnostic business analyst. Analyze the following YES/NO questions and answers from the user for the ${toolName} tool. Based on these, create 3 sharp insights. Then, write a detailed, professional, 1-page diagnostic report for a small business using data visuals and tables where needed. Focus on clarity and action steps.
+    const yesAnswers = answers.filter((a: any) => a.answer === "Yes");
+    const noAnswers = answers.filter((a: any) => a.answer === "No");
+    const yesCount = yesAnswers.length;
+    const noCount = noAnswers.length;
 
-Client: ${name}
-Tool: ${toolName}
-Score: ${score}/100
+    let prompt = `You are a friendly business advisor helping small business owners improve their operations. Use a simple, supportive tone at a 6th-grade reading level.
 
-Questions and Answers:
+The client just completed a diagnostic tool called: "${toolName}".
+Here are their answers:
 ${answers.map((a: any, i: number) => `${i + 1}. ${a.question} - ${a.answer}`).join("\n")}
 
-Create a comprehensive business diagnostic report with:
-1. Executive Summary
-2. Key Insights (exactly 3)
-3. Strategic Recommendations (5-7 actionable items)
-4. Implementation Timeline
-5. Success Metrics
+Generate exactly 1 Insight and 2 Challenges based on their specific answers. 
 
-Limit output to 600-800 words for a 1-page equivalent.`
+**Rules:**
+1. **Insight**: Summarize the good things they're doing (from YES answers) in 1-2 lines maximum. Don't repeat questions, just give a gist of what they're doing well.
+2. **Challenge 1**: From their NO answers, identify one specific area for improvement with a simple action step.
+3. **Challenge 2**: From their NO answers, identify another specific area for improvement with a simple action step.
+
+**Special Cases:**
+- If ALL answers are YES: Praise their strong foundation but create FOMO for the detailed report. Say they can grow even more.
+- If ALL answers are NO: Don't show any good part. Motivate them to take the first step toward success.
+- If mostly YES (7+ YES): Focus on the few NO answers for challenges, expand them into 2 separate challenges.
+- If mostly NO (7+ NO): Focus on the few YES answers for insight, create 2 specific challenges from NO answers.
+
+Format your response exactly like this:
+1. Insight: [One line summary of what they're doing well]
+2. Challenge: [Specific issue + simple action step]
+3. Challenge: [Another specific issue + simple action step]
+
+Example:
+1. Insight: Your business has good customer relationships and clear processes in place.
+2. Challenge: Your data is scattered across different systems. Pick one tool and start keeping everything in one place.
+3. Challenge: Your team communication could be better. Set up a weekly 15-minute meeting to share updates.
+
+Avoid emojis, icons, or vague statements. Use direct, friendly tone.`.trim();
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -335,48 +353,154 @@ function generateMetrics(toolName: string) {
   ]
 }
 
-function generateStructuredFallback(answers: any[], toolName: string) {
+function generateDynamicInsights(answers: any[], toolName: string, score: number) {
   const noAnswers = answers.filter((a: any) => a.answer === "No");
   const yesAnswers = answers.filter((a: any) => a.answer === "Yes");
+  const yesCount = yesAnswers.length;
+  const noCount = noAnswers.length;
 
-  const challenges = noAnswers.slice(0, 2).map((a: any, index: number) => {
-    const question = a.question.toLowerCase();
+  // All YES answers - create FOMO
+  if (yesCount === 10) {
+    return [
+      {
+        type: "Insight",
+        description: "Your business shows excellent practices across all areas. You have a strong foundation that many businesses strive for.",
+      },
+      {
+        type: "Challenge",
+        description: "Even with your strong performance, there's always room to grow. Get your detailed report to discover advanced strategies that could take your business to the next level.",
+      },
+      {
+        type: "Challenge",
+        description: "Consider how you can scale your current success. The detailed report will show you exactly where to focus for maximum impact.",
+      },
+    ];
+  }
+
+  // All NO answers - motivate without showing good parts
+  if (noCount === 10) {
+    return [
+      {
+        type: "Insight",
+        description: "Taking this diagnostic is your first step toward business success. You're ready to build a stronger foundation.",
+      },
+      {
+        type: "Challenge",
+        description: "Your business needs a systematic approach to operations. Start with one area and build from there.",
+      },
+      {
+        type: "Challenge",
+        description: "Get your detailed report to see exactly which steps to take first. Every successful business started exactly where you are now.",
+      },
+    ];
+  }
+
+  // Mostly YES (7+ YES)
+  if (yesCount >= 7) {
+    const insight = generateInsightFromYes(yesAnswers, toolName);
+    const challenges = generateChallengesFromNo(noAnswers, 2);
+    return [
+      { type: "Insight", description: insight },
+      ...challenges,
+    ];
+  }
+
+  // Mostly NO (7+ NO)
+  if (noCount >= 7) {
+    const insight = yesCount > 0 ? generateInsightFromYes(yesAnswers, toolName) : "You're taking the right first step by assessing your business needs.";
+    const challenges = generateChallengesFromNo(noAnswers, 2);
+    return [
+      { type: "Insight", description: insight },
+      ...challenges,
+    ];
+  }
+
+  // Balanced (4-6 YES, 4-6 NO)
+  const insight = generateInsightFromYes(yesAnswers, toolName);
+  const challenges = generateChallengesFromNo(noAnswers, 2);
+  return [
+    { type: "Insight", description: insight },
+    ...challenges,
+  ];
+}
+
+function generateInsightFromYes(yesAnswers: any[], toolName: string): string {
+  if (yesAnswers.length === 0) return "You're taking the right first step by assessing your business needs.";
+  
+  const areas = yesAnswers.map(a => a.question.toLowerCase());
+  
+  if (toolName.includes("Data Hygiene")) {
+    if (areas.some(q => q.includes("customer") || q.includes("info"))) {
+      return "You have good systems for managing customer information and business data.";
+    }
+    if (areas.some(q => q.includes("track") || q.includes("system"))) {
+      return "Your business has organized tracking systems in place.";
+    }
+    return "You have some good data management practices that you can build upon.";
+  }
+  
+  if (toolName.includes("Marketing")) {
+    if (areas.some(q => q.includes("customer") || q.includes("feedback"))) {
+      return "You understand your customers and gather feedback effectively.";
+    }
+    if (areas.some(q => q.includes("ads") || q.includes("marketing"))) {
+      return "You have good marketing practices and customer engagement strategies.";
+    }
+    return "You have some effective marketing approaches that are working well.";
+  }
+  
+  if (toolName.includes("Cash Flow")) {
+    if (areas.some(q => q.includes("profit") || q.includes("money"))) {
+      return "You have a good understanding of your business finances and profitability.";
+    }
+    if (areas.some(q => q.includes("track") || q.includes("system"))) {
+      return "You have systems in place to track your business finances.";
+    }
+    return "You have some good financial practices that provide a solid foundation.";
+  }
+  
+  return "You have several areas where your business is performing well.";
+}
+
+function generateChallengesFromNo(noAnswers: any[], count: number): any[] {
+  const challenges = [];
+  
+  for (let i = 0; i < Math.min(count, noAnswers.length); i++) {
+    const answer = noAnswers[i];
+    const question = answer.question.toLowerCase();
     let actionStep = "";
     
     if (question.includes("centralized") || question.includes("one place")) {
-      actionStep = "Pick one tool (like a spreadsheet or simple app) and start keeping all your info in one place. That is a good start!";
+      actionStep = "Pick one tool and start keeping all your info in one place.";
     } else if (question.includes("communicate") || question.includes("talk")) {
-      actionStep = "Set up a weekly 15-minute meeting to share updates. This will help everyone stay on the same page.";
+      actionStep = "Set up regular team meetings to share updates.";
     } else if (question.includes("reports") || question.includes("mistakes")) {
-      actionStep = "Start using simple checklists for important tasks. This will help reduce errors and make your work more reliable.";
+      actionStep = "Start using simple checklists for important tasks.";
     } else if (question.includes("ads") || question.includes("emails")) {
-      actionStep = "Start tracking which marketing efforts bring in the most customers. This will help you spend your money wisely.";
+      actionStep = "Start tracking which marketing efforts bring in customers.";
     } else if (question.includes("target") || question.includes("customers")) {
-      actionStep = "Write down who your best customers are and what they like. This will help you find more customers like them.";
+      actionStep = "Write down who your best customers are and what they like.";
     } else if (question.includes("feedback") || question.includes("reviews")) {
-      actionStep = "Ask one customer each week for their honest opinion. This will help you improve your business.";
-    } else if (question.includes("forecast") || question.includes("3 months")) {
-      actionStep = "Start tracking your monthly income and expenses. This will help you plan for the future.";
-    } else if (question.includes("overdue") || question.includes("follow up")) {
-      actionStep = "Set up automatic reminders for when customers owe you money. This will help you get paid faster.";
-    } else if (question.includes("buffer") || question.includes("emergencies")) {
-      actionStep = "Start saving a small amount each month for unexpected expenses. Even $50 a month adds up quickly.";
+      actionStep = "Ask customers for their honest opinion regularly.";
+    } else if (question.includes("profit") || question.includes("money")) {
+      actionStep = "Start tracking your income and expenses more closely.";
+    } else if (question.includes("cost") || question.includes("expense")) {
+      actionStep = "Calculate your costs and set clear pricing.";
+    } else if (question.includes("goal") || question.includes("sales")) {
+      actionStep = "Set clear monthly goals for your business.";
     } else {
-      actionStep = "Take one small step this week to improve this area. Every improvement counts!";
+      actionStep = "Take one small step this week to improve this area.";
     }
-
-    return {
+    
+    challenges.push({
       type: "Challenge",
-      description: `Your response to "${a.question}" suggests an area that needs improvement. ${actionStep}`,
-    };
-  });
+      description: `${answer.question.replace("Do you", "You need to").replace("Have you", "You need to").replace("Is it", "You need to").replace("Are your", "You need to").replace("Can you", "You need to")} ${actionStep}`,
+    });
+  }
+  
+  return challenges;
+}
 
-  const strengths = yesAnswers.length > 0
-    ? [{
-        type: "Strength",
-        description: `Your ${toolName} responses show a positive foundation. You have ${yesAnswers.length} areas working well, which is a great start! Keep building on these strengths.`,
-      }]
-    : [];
-
-  return [...strengths, ...challenges];
+function generateStructuredFallback(answers: any[], toolName: string) {
+  return generateDynamicInsights(answers, toolName, 0);
 }

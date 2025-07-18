@@ -24,6 +24,12 @@ export default function EmailCapture({ onSubmit, onBack }: EmailCaptureProps) {
     e.preventDefault()
     if (!name.trim() || !email.trim()) return
     setIsSubmitting(true)
+    
+    // Store user data for resend functionality
+    const userData = { name: name.trim(), email: email.trim() };
+    localStorage.setItem('userData', JSON.stringify(userData));
+    sessionStorage.setItem('userData', JSON.stringify(userData));
+    
     await new Promise((resolve) => setTimeout(resolve, 1000)) // Simulate processing
     onSubmit(name.trim(), email.trim())
   }

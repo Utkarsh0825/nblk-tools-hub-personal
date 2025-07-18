@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { ChevronLeft, ChevronRight, X as CloseIcon, CheckCircle, XCircle, EyeOff, MoreVertical, Mail, Phone, AlertTriangle, TrendingUp, Lock, Check, ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronLeft, ChevronRight, X as CloseIcon, CheckCircle, EyeOff, AlertTriangle, TrendingUp, Check, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import type { DiagnosticAnswer } from "@/app/page"
@@ -31,6 +31,8 @@ export default function PartialReport({
   const [lockedIdx, setLockedIdx] = useState<number | null>(null);
   const [walkthroughOpen, setWalkthroughOpen] = useState(false);
   const [walkthroughStep, setWalkthroughStep] = useState(0);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [showResendSuccess, setShowResendSuccess] = useState(false);
   // Show walkthrough on first visit only
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -41,6 +43,69 @@ export default function PartialReport({
       }
     }
   }, []);
+
+  // Handle resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => {
+        setResendCooldown(resendCooldown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+  // Handle resend success message
+  useEffect(() => {
+    if (showResendSuccess) {
+      const timer = setTimeout(() => {
+        setShowResendSuccess(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showResendSuccess]);
+
+  const handleResendReport = async () => {
+    if (resendCooldown > 0) return;
+    
+    try {
+      // Get user data from localStorage or sessionStorage
+      const userData = localStorage.getItem('userData') || sessionStorage.getItem('userData');
+      if (!userData) {
+        console.error('No user data found for resend');
+        return;
+      }
+      
+      const { name, email } = JSON.parse(userData);
+      
+      // Generate and send report
+      const reportResponse = await fetch("/api/generate-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ toolName, score, answers, name }),
+      });
+
+      const reportData = await reportResponse.json();
+
+      if (reportData.success) {
+        await fetch("/api/send-report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: email,
+            name,
+            toolName,
+            reportContent: reportData.content || reportData.insights,
+            score,
+          }),
+        });
+        
+        setShowResendSuccess(true);
+        setResendCooldown(60); // 1 minute cooldown
+      }
+    } catch (error) {
+      console.error("Failed to resend report:", error);
+    }
+  };
   const levels = [
     {
       label: 'Level 1: Getting Started',
@@ -70,96 +135,158 @@ export default function PartialReport({
 
   const generateInsights = (answers: DiagnosticAnswer[], toolName: string) => {
     const noAnswers = answers.filter((a) => a.answer === "No")
+    const yesAnswers = answers.filter((a) => a.answer === "Yes")
+    const yesCount = yesAnswers.length
+    const noCount = noAnswers.length
     const insights = []
 
-    if (toolName.includes("Data Hygiene")) {
-      if (noAnswers.some((a) => a.question.includes("centralized") || a.question.includes("one place"))) {
-        insights.push({
-          icon: AlertTriangle,
-          color: "text-orange-600",
-          title: "CRM System Missing",
-          description: "Leading to fragmented data access and inefficient customer management.",
-        })
-      }
-      if (noAnswers.some((a) => a.question.includes("communicate") || a.question.includes("talk to each other"))) {
-        insights.push({
-          icon: TrendingUp,
-          color: "text-blue-600",
-          title: "System Integration Gap",
-          description: "Your business tools need better integration to streamline operations.",
-        })
-      }
-      if (noAnswers.some((a) => a.question.includes("reports") || a.question.includes("mistakes"))) {
-        insights.push({
-          icon: CheckCircle,
-          color: "text-[#006400]",
-          title: "Data Quality Issues",
-          description: "Manual processes are creating errors in your business reports.",
-        })
-      }
-    } else if (toolName.includes("Marketing")) {
-      if (noAnswers.some((a) => a.question.includes("ads") || a.question.includes("emails"))) {
-        insights.push({
-          icon: AlertTriangle,
-          color: "text-orange-600",
-          title: "Marketing Attribution Missing",
-          description: "You can't track which marketing efforts drive actual results.",
-        })
-      }
-      if (noAnswers.some((a) => a.question.includes("target") || a.question.includes("customers"))) {
-        insights.push({
-          icon: TrendingUp,
-          color: "text-blue-600",
-          title: "Audience Targeting Needs Work",
-          description: "Better customer segmentation could improve your marketing ROI.",
-        })
-      }
-      if (noAnswers.some((a) => a.question.includes("feedback") || a.question.includes("reviews"))) {
-        insights.push({
-          icon: CheckCircle,
-          color: "text-[#006400]",
-          title: "Customer Feedback Gap",
-          description: "Missing systematic feedback collection from your customers.",
-        })
-      }
-    } else if (toolName.includes("Cash Flow")) {
-      if (noAnswers.some((a) => a.question.includes("forecast") || a.question.includes("3 months"))) {
-        insights.push({
-          icon: AlertTriangle,
-          color: "text-orange-600",
-          title: "Cash Flow Forecasting Missing",
-          description: "You're making financial decisions without visibility into future cash needs.",
-        })
-      }
-      if (noAnswers.some((a) => a.question.includes("overdue") || a.question.includes("follow up"))) {
-        insights.push({
-          icon: TrendingUp,
-          color: "text-blue-600",
-          title: "Payment Collection Process Needed",
-          description: "Automated follow-up could significantly improve cash flow timing.",
-        })
-      }
-      if (noAnswers.some((a) => a.question.includes("buffer") || a.question.includes("emergencies"))) {
-        insights.push({
-          icon: CheckCircle,
-          color: "text-[#006400]",
-          title: "Emergency Fund Missing",
-          description: "Your business lacks financial reserves for unexpected situations.",
-        })
-      }
+    // All YES answers - create FOMO
+    if (yesCount === 10) {
+      insights.push(
+        {
+          type: "Insight",
+          title: "Excellent Foundation",
+          description: "Your business shows excellent practices across all areas. You have a strong foundation that many businesses strive for.",
+        },
+        {
+          type: "Challenge",
+          title: "Growth Opportunity",
+          description: "Even with your strong performance, there's always room to grow. Get your detailed report to discover advanced strategies that could take your business to the next level.",
+        },
+        {
+          type: "Challenge",
+          title: "Scale Your Success",
+          description: "Consider how you can scale your current success. The detailed report will show you exactly where to focus for maximum impact.",
+        }
+      )
+      return insights
     }
 
-    // Ensure exactly 3 insights
-    while (insights.length < 3 && noAnswers.length > 0) {
-      insights.push({
-        icon: AlertTriangle,
-        color: "text-orange-600",
-        title: "Business Process Gap",
-        description: noAnswers[insights.length]?.question || "Additional improvement opportunity identified.",
+    // All NO answers - motivate without showing good parts
+    if (noCount === 10) {
+      insights.push(
+        {
+          type: "Insight",
+          title: "First Step Taken",
+          description: "Taking this diagnostic is your first step toward business success. You're ready to build a stronger foundation.",
+        },
+        {
+          type: "Challenge",
+          title: "Systematic Approach Needed",
+          description: "Your business needs a systematic approach to operations. Start with one area and build from there.",
+        },
+        {
+          type: "Challenge",
+          title: "Get Detailed Guidance",
+          description: "Get your detailed report to see exactly which steps to take first. Every successful business started exactly where you are now.",
+        }
+      )
+      return insights
+    }
+
+    // Generate insight from YES answers
+    let insightTitle = ""
+    let insightDescription = ""
+    
+    if (yesCount > 0) {
+      const areas = yesAnswers.map(a => a.question.toLowerCase())
+      
+      if (toolName.includes("Data Hygiene")) {
+        if (areas.some(q => q.includes("customer") || q.includes("info"))) {
+          insightTitle = "Good Data Management"
+          insightDescription = "You have good systems for managing customer information and business data."
+        } else if (areas.some(q => q.includes("track") || q.includes("system"))) {
+          insightTitle = "Organized Systems"
+          insightDescription = "Your business has organized tracking systems in place."
+        } else {
+          insightTitle = "Solid Foundation"
+          insightDescription = "You have some good data management practices that you can build upon."
+        }
+      } else if (toolName.includes("Marketing")) {
+        if (areas.some(q => q.includes("customer") || q.includes("feedback"))) {
+          insightTitle = "Customer Understanding"
+          insightDescription = "You understand your customers and gather feedback effectively."
+        } else if (areas.some(q => q.includes("ads") || q.includes("marketing"))) {
+          insightTitle = "Good Marketing Practices"
+          insightDescription = "You have good marketing practices and customer engagement strategies."
+        } else {
+          insightTitle = "Effective Approaches"
+          insightDescription = "You have some effective marketing approaches that are working well."
+        }
+      } else if (toolName.includes("Cash Flow")) {
+        if (areas.some(q => q.includes("profit") || q.includes("money"))) {
+          insightTitle = "Financial Understanding"
+          insightDescription = "You have a good understanding of your business finances and profitability."
+        } else if (areas.some(q => q.includes("track") || q.includes("system"))) {
+          insightTitle = "Financial Systems"
+          insightDescription = "You have systems in place to track your business finances."
+        } else {
+          insightTitle = "Solid Financial Foundation"
+          insightDescription = "You have some good financial practices that provide a solid foundation."
+        }
+      } else {
+        insightTitle = "Good Performance"
+        insightDescription = "You have several areas where your business is performing well."
+      }
+    } else {
+      insightTitle = "Ready to Improve"
+      insightDescription = "You're taking the right first step by assessing your business needs."
+    }
+
+    insights.push({
+      type: "Insight",
+      title: insightTitle,
+      description: insightDescription,
+    })
+
+    // Generate challenges from NO answers
+    const challenges = []
+    for (let i = 0; i < Math.min(2, noAnswers.length); i++) {
+      const answer = noAnswers[i]
+      const question = answer.question.toLowerCase()
+      let actionStep = ""
+      let challengeTitle = ""
+      
+      if (question.includes("centralized") || question.includes("one place")) {
+        challengeTitle = "Data Organization"
+        actionStep = "Pick one tool and start keeping all your info in one place."
+      } else if (question.includes("communicate") || question.includes("talk")) {
+        challengeTitle = "Team Communication"
+        actionStep = "Set up regular team meetings to share updates."
+      } else if (question.includes("reports") || question.includes("mistakes")) {
+        challengeTitle = "Process Quality"
+        actionStep = "Start using simple checklists for important tasks."
+      } else if (question.includes("ads") || question.includes("emails")) {
+        challengeTitle = "Marketing Tracking"
+        actionStep = "Start tracking which marketing efforts bring in customers."
+      } else if (question.includes("target") || question.includes("customers")) {
+        challengeTitle = "Customer Targeting"
+        actionStep = "Write down who your best customers are and what they like."
+      } else if (question.includes("feedback") || question.includes("reviews")) {
+        challengeTitle = "Customer Feedback"
+        actionStep = "Ask customers for their honest opinion regularly."
+      } else if (question.includes("profit") || question.includes("money")) {
+        challengeTitle = "Financial Tracking"
+        actionStep = "Start tracking your income and expenses more closely."
+      } else if (question.includes("cost") || question.includes("expense")) {
+        challengeTitle = "Cost Management"
+        actionStep = "Calculate your costs and set clear pricing."
+      } else if (question.includes("goal") || question.includes("sales")) {
+        challengeTitle = "Goal Setting"
+        actionStep = "Set clear monthly goals for your business."
+      } else {
+        challengeTitle = "Process Improvement"
+        actionStep = "Take one small step this week to improve this area."
+      }
+      
+      challenges.push({
+        type: "Challenge",
+        title: challengeTitle,
+        description: `${answer.question.replace("Do you", "You need to").replace("Have you", "You need to").replace("Is it", "You need to").replace("Are your", "You need to").replace("Can you", "You need to")} ${actionStep}`,
       })
     }
 
-    return insights.slice(0, 3)
+    return [...insights, ...challenges]
   }
 
   const insights = generateInsights(answers, toolName)
@@ -638,10 +765,11 @@ export default function PartialReport({
           <h2 className="text-lg pt-4 font-semibold">Initial Insights & Challenges</h2>
           
           {insights.map((insight, index) => (
-            <div key={index} className="rounded-lg border border-white/10 hover:border-white/20 p-6 bg-white/5 flex gap-5 items-start">
-              <insight.icon className="text-white mt-1 shrink-0 stroke-2" />
+            <div key={index} className="rounded-lg border border-white/10 hover:border-white/20 p-6 bg-white/5">
               <div className="flex-1">
-                <h4 className="font-semibold text-base mb-1 text-white/90">{insight.title}</h4>
+                <h4 className="font-semibold text-base mb-2 text-white/90">
+                  {insight.type === "Insight" ? "Insight:" : "Challenge:"} {insight.title}
+                </h4>
                 <p className="text-white/60 text-sm">{insight.description}</p>
               </div>
             </div>
@@ -731,8 +859,25 @@ export default function PartialReport({
             >
               Get Detailed Report
             </Button>
+            <Button
+              onClick={handleResendReport}
+              disabled={resendCooldown > 0}
+              className="flex-1 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg"
+            >
+              {resendCooldown > 0 ? `Resend (${resendCooldown}s)` : "Resend Report"}
+            </Button>
           </div>
         </footer>
+
+        {/* Resend Success Toast */}
+        {showResendSuccess && (
+          <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5" />
+              <span>Report resent successfully!</span>
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   )

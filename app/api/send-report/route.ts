@@ -20,11 +20,11 @@ export async function POST(request: NextRequest) {
         },
       ],
         from: {
-    email: "uky.utkarsh0825@gmail.com",  // ✅ verified sender
+    email: "info@nblkconsulting.com",  // ✅ updated sender
     name: "NBLK",
   },
   reply_to: {
-    email: "uky.utkarsh0825@gmail.com",  // ✅ also set reply_to properly
+    email: "info@nblkconsulting.com",  // ✅ updated reply_to
     name: "NBLK",
   },
       content: [
