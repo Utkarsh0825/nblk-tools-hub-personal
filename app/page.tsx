@@ -95,10 +95,12 @@ export default function NBLKToolsHub() {
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('toolsHubMilestoneStep3Complete', 'true');
       }
-      setCurrentView("success")
+      // setCurrentView("success") // REMOVE THIS LINE
+      // Instead, stay on email-capture and let the modal show
     } catch (error) {
       console.error("Failed to send report:", error)
-      setCurrentView("success")
+      // setCurrentView("success") // REMOVE THIS LINE
+      // Instead, stay on email-capture and let the modal show
     }
   }
 

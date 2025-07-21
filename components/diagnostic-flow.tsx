@@ -146,11 +146,11 @@ export default function DiagnosticFlow({ toolName, onComplete, onBack, onLogoCli
               <div className="flex flex-col gap-4 mt-1">
                 <div className="flex items-center gap-4">
                   <Mail className="w-6 h-6 text-green-600" />
-                  <a href="mailto:info@nblkconsulting.com" className="hover:text-green-700 text-sm">info@nblkconsulting.com</a>
+                  <a href="mailto:admin@nblkconsulting.com" className="hover:text-green-700 text-sm">admin@nblkconsulting.com</a>
                 </div>
                 <div className="flex items-center gap-4">
                   <Phone className="w-6 h-6 text-green-600" />
-                  <a href="tel:+1234567890" className="hover:text-green-700 text-sm">+1 (234) 567-890</a>
+                  <a href="tel:+12125983030" className="hover:text-green-700 text-sm">+1 (212) 598-3030</a>
                 </div>
               </div>
             </div>
