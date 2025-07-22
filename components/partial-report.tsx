@@ -900,7 +900,7 @@ export default function PartialReport({
               onClick={onGetFullReport}
               className="flex-1 bg-white text-black hover:bg-gray-300 rounded-lg"
             >
-              Get Detailed Report
+              Get My Results
             </Button>
           </div>
         </footer>
