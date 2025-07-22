@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
     const { toolName, score, answers, name } = await request.json()
 
     if (!process.env.OPENAI_API_KEY) {
-      console.log("OpenAI API key not found - using intelligent fallback")
+      console.log("🔄 OpenAI API key not found - using intelligent fallback")
       const fallbackInsights = generateDynamicInsights(answers, toolName, score);
       const fallbackContent = generateIntelligentReport(toolName, score, answers, name);
       return NextResponse.json({
@@ -20,6 +20,8 @@ export async function POST(request: NextRequest) {
     const noAnswers = answers.filter((a: any) => a.answer === "No");
     const yesCount = yesAnswers.length;
     const noCount = noAnswers.length;
+
+    console.log("🤖 Attempting OpenAI API call for report insights...");
 
     let prompt = `You are a friendly business advisor helping small business owners improve their operations. Use a simple, supportive tone at a 6th-grade reading level.
 
@@ -84,7 +86,8 @@ Avoid emojis, icons, or question marks. Use direct, friendly tone.`.trim();
     })
 
     if (!response.ok) {
-      console.error(`OpenAI API error: ${response.status}`)
+      console.error(`❌ OpenAI API error: ${response.status}`)
+      console.log("🔄 Falling back to intelligent templates...");
       const fallbackInsights = generateStructuredFallback(answers, toolName);
       const fallbackContent = generateIntelligentReport(toolName, score, answers, name);
       return NextResponse.json({
@@ -135,6 +138,9 @@ Avoid emojis, icons, or question marks. Use direct, friendly tone.`.trim();
     // Generate the full report content using the insights
     const fullReportContent = generateIntelligentReport(toolName, score, answers, name);
     
+    console.log("✅ OpenAI insights generated successfully!");
+    console.log(`📄 Report Content Source: openai`);
+    
     return NextResponse.json({
       success: true,
       insights: parsedContent,
@@ -142,7 +148,7 @@ Avoid emojis, icons, or question marks. Use direct, friendly tone.`.trim();
       source: "openai",
     })
   } catch (error) {
-    console.error("Error generating report:", error)
+    console.error("❌ Error generating report:", error)
     const { toolName, score, answers, name } = await request.json().catch(() => ({
       toolName: "Business Diagnostic",
       score: 0,
@@ -150,6 +156,7 @@ Avoid emojis, icons, or question marks. Use direct, friendly tone.`.trim();
       name: "Valued Client",
     }))
 
+    console.log("🔄 Using error fallback system...");
     const fallbackInsights = generateStructuredFallback(answers, toolName);
     const fallbackContent = generateIntelligentReport(toolName, score, answers, name);
     return NextResponse.json({

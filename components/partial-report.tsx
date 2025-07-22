@@ -148,7 +148,7 @@ export default function PartialReport({
     }
     // Case 3: Mostly Yes (7+ yes)
     else if (yesCount >= 7) {
-      insights.push({
+        insights.push({
         type: "Insight",
         title: "Strong Foundation",
         description: `Your business has strong practices in ${yesCount} key areas. This solid foundation gives you a great advantage for growth and improvement.`,
@@ -262,7 +262,7 @@ export default function PartialReport({
     }
     // Case 5: Mixed answers (4-6 yes, 4-6 no)
     else {
-      insights.push({
+        insights.push({
         type: "Insight",
         title: "Balanced Foundation",
         description: `You have ${yesCount} strong areas and ${noCount} opportunities for improvement. This balanced foundation gives you clear direction for growth.`,
