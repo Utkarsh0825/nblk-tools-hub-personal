@@ -125,8 +125,13 @@ export async function generatePdfReport(input: DiagnosticInput): Promise<Buffer>
         '--no-first-run',
         '--no-zygote',
         '--disable-gpu'
+<<<<<<< HEAD
       ]
       // executablePath removed for cross-platform compatibility
+=======
+      ],
+      executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+>>>>>>> 836f313c91e5b4c716cb1668814262cbe53c1c70
     });
     const page = await browser.newPage();
     await page.setViewport({ width: 1200, height: 900 });
