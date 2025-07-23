@@ -74,7 +74,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       personalizations: [
         {
           to: [{ email: to, name }],
-          subject: `Your NBLK Business Diagnostic Report - ${toolName}`,
+          subject: `Your Initial Diagnostic Results Are In — Let’s Keep Building`,
         },
       ],
       from: {
@@ -164,7 +164,10 @@ function generateProfessionalEmailHTML(name: string, toolName: string, reportCon
             .score-section { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 40px; text-align: center; border-bottom: 3px solid #006400; }
             .score { font-size: 64px; font-weight: bold; color: #006400; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); }
             .performance-level { font-size: 24px; font-weight: 600; color: #495057; margin-bottom: 10px; }
-            .content { padding: 40px; white-space: pre-line; font-size: 16px; }
+            .content { padding: 40px; white-space: pre-line; font-size: 16px; text-align: left; }
+            .section { margin: 32px 40px 0 40px; text-align: left; font-size: 16px; line-height: 1.6; }
+            .section-title { font-size: 1.15rem; font-weight: bold; color: #006400; margin-bottom: 8px; margin-top: 24px; }
+            .b2b-link { font-weight: bold; color: #006400; text-decoration: underline; font-size: 16px; }
             .footer { background: #006400; color: white; text-align: center; padding: 30px; font-size: 14px; }
             .footer-logo { font-size: 24px; font-weight: bold; margin-bottom: 15px; letter-spacing: 1px; }
             strong { color: #006400; }
@@ -176,10 +179,9 @@ function generateProfessionalEmailHTML(name: string, toolName: string, reportCon
             <div class="header">
                 <div class="logo">NBLK</div>
                 <h2 style="margin: 0; font-weight: 300;">Business Diagnostic Report</h2>
-                <p style="margin: 10px 0 0 0; opacity: 0.9;">Small Business Solutions by NBLK</p>
             </div>
             <div class="score-section">
-                <div class="score">${score}<span style="font-size: 32px; color: #666;">/100</span></div>
+                <div class="score">
                 <div class="performance-level">${getPerformanceLevel(score)} Performance</div>
                 <p style="margin: 15px 0 0 0; color: #666; font-size: 16px;">Prepared for ${name}</p>
             </div>
@@ -190,11 +192,24 @@ function generateProfessionalEmailHTML(name: string, toolName: string, reportCon
             <div class="content">
                 ${content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>')}
             </div>
+            <div class="section">
+              <div class="section-title">B2B Partner</div>
+              <div>
+                This is just the beginning. You’ve taken the first step in a modular toolset designed to help small businesses identify gaps, unlock AI-powered support, and grow with clarity. More diagnostic modules will be released soon — each building toward a full-spectrum profile that provides deeper insights, smarter recommendations, and actionable plans.<br><br>
+                If you'd like to:<br>
+                Be alerted when new modules go live<br>
+                Track your progress toward a complete diagnostic report<br>
+                Or apply to be a B2B partner (and potentially be recommended to other businesses through our network)<br>
+                <span class="b2b-link"><a href="https://nblk.typeform.com/NBLKForm" class="b2b-link">Sign up here</a></span><br><br>
+                This diagnostic tool is powered by the NNX1<sup>®</sup> Engine — built to put people first, and AI to work for them. We're excited to have you on this journey.<br><br>
+                Thanks for being part of the NBLK community,<br>
+                <strong>The NBLK Team</strong>
+              </div>
+            </div>
             <div class="footer">
                 <div class="footer-logo">NBLK CONSULTING</div>
                 <p style="margin: 10px 0;">442 5th Avenue, #2304, New York, NY 10018</p>
                 <p style="margin: 10px 0;">Email: admin@nblkconsulting.com | Phone: (212) 598-3030</p>
-                <p style="margin: 20px 0 0 0; font-style: italic; opacity: 0.8;">Small Business Solutions by NBLK</p>
             </div>
         </div>
     </body>

@@ -83,7 +83,7 @@ export async function generatePdfReport(input: DiagnosticInput): Promise<Buffer>
     if (process.env.OPENAI_API_KEY) {
       try {
         const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-        const prompt = `You are a business consultant. Based on the user’s answers to the diagnostic questions, write 3 direct, actionable, and context-aware business improvement recommendations. Do not reference question numbers or specific questions. Write as if you are advising a real client. User: ${userName}. Limit your total response to 400-500 words.`;
+        const prompt = `You are a business consultant. Based on the user’s answers to the diagnostic questions, write 3 direct, actionable, and context-aware business improvement recommendations. Do not reference question numbers or specific questions. Write as if you are advising a real client. Limit your total response to 600 characters (about 100 words) so it fits in a small space.`;
         const resp = await openai.chat.completions.create({
           model: 'gpt-3.5-turbo',
           messages: [{ role: 'user', content: prompt }],
@@ -182,13 +182,4 @@ function generateSyncStatus(answers: Record<string, string | boolean>) {
   // Modify based on user answers if available
   // This can be expanded based on your specific diagnostic questions
   return baseStatus;
-}
-
-// Async PDF generation function for non-blocking email delivery
-export async function generatePdfReportAsync(input: DiagnosticInput): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    generatePdfReport(input)
-      .then(resolve)
-      .catch(reject);
-  });
 } 
