@@ -116,11 +116,18 @@ export async function generatePdfReport(input: DiagnosticInput): Promise<Buffer>
     });
 
     // Puppeteer PDF
-    const browser = await puppeteer.launch({
-      args: puppeteer.defaultArgs({ args: chromium.args }),
-      executablePath: await chromium.executablePath(),
-      headless: true,
-    });
+    const isProd = process.env.AWS_LAMBDA_FUNCTION_VERSION || process.env.VERCEL;
+    const browser = await puppeteer.launch(
+      isProd
+        ? {
+            args: chromium.args,
+            executablePath: await chromium.executablePath(),
+            headless: true,
+          }
+        : {
+            headless: true,
+          }
+    );
     const page = await browser.newPage();
     await page.setViewport({ width: 1200, height: 900 });
     await page.setContent(html, { waitUntil: 'networkidle0' });
