@@ -202,12 +202,7 @@ Please provide detailed, actionable insights that demonstrate the value of profe
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization:
-<<<<<<< HEAD
-            `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`,
-=======
-            "Bearer ***REMOVED***LGI2qwqDlJxD8V7nTgY3GiPtzGN_EbOi3T8eJ0z5p1bYXWpEEfQp0XCUoyhyNTE0BeHMNlUzXVT3BlbkFJi31fXbdUm0SiAnZP6rWJNp_quHy1qFjvh4BTl_JHCgJCHgpEkQKY2nroC9Z5kMjnvmND8W7xMA",
->>>>>>> 836f313c91e5b4c716cb1668814262cbe53c1c70
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`,
         },
         body: JSON.stringify({
           model: "gpt-3.5-turbo",
