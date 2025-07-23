@@ -203,7 +203,7 @@ Please provide detailed, actionable insights that demonstrate the value of profe
         headers: {
           "Content-Type": "application/json",
           Authorization:
-            "Bearer ***REMOVED***LGI2qwqDlJxD8V7nTgY3GiPtzGN_EbOi3T8eJ0z5p1bYXWpEEfQp0XCUoyhyNTE0BeHMNlUzXVT3BlbkFJi31fXbdUm0SiAnZP6rWJNp_quHy1qFjvh4BTl_JHCgJCHgpEkQKY2nroC9Z5kMjnvmND8W7xMA",
+            `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`,
         },
         body: JSON.stringify({
           model: "gpt-3.5-turbo",
