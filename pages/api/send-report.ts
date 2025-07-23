@@ -63,6 +63,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let pdfBuffer: Buffer;
     try {
       pdfBuffer = await generatePdfReport(pdfInput);
+      console.log('PDF buffer type:', typeof pdfBuffer);
+      console.log('PDF buffer length:', pdfBuffer.length);
+      console.log('First 100 bytes:', pdfBuffer.slice(0, 100));
     } catch (pdfError) {
       console.error('PDF generation failed:', pdfError);
       pdfBuffer = Buffer.from('PDF generation failed');
