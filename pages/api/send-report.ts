@@ -81,11 +81,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
       ],
       from: {
-        email: 'uky.utkarsh0825@gmail.com',
+        email: 'info@nblkconsulting.com',
         name: 'NBLK',
       },
       reply_to: {
-        email: 'uky.utkarsh0825@gmail.com',
+        email: 'info@nblkconsulting.com',
         name: 'NBLK',
       },
       content: [
