@@ -5,6 +5,7 @@ import fs from 'fs/promises';
 import OpenAI from 'openai';
 import { dummyData } from './data/dummyResponses';
 import { calculateYesNoPercentages } from './data/getAnswerStats';
+import chromium from '@sparticuz/chromium';
 
 export interface DiagnosticInput {
   companyName?: string;
@@ -116,17 +117,9 @@ export async function generatePdfReport(input: DiagnosticInput): Promise<Buffer>
 
     // Puppeteer PDF
     const browser = await puppeteer.launch({
+      args: puppeteer.defaultArgs({ args: chromium.args }),
+      executablePath: await chromium.executablePath(),
       headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu'
-      ]
-      // executablePath removed for cross-platform compatibility
     });
     const page = await browser.newPage();
     await page.setViewport({ width: 1200, height: 900 });
